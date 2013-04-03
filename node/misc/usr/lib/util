@@ -84,25 +84,53 @@ function cart_props {
     echo "CART_PROPERTIES: $@"
 }
 
+function set_env_var {
+    echo "ENV_VAR_ADD: $@"
+}
+
+# Generate a random string from /dev/urandom
+# Arguments:
+#  - Desired length
+#  - Possible character space
+#  - Patterns to omit
+function random_string {
+  DEFAULT_SPACE="a-zA-Z0-9"
+  DEFAULT_LEN=12
+
+  len=${1-$DEFAULT_LEN}
+  space=${2-"${DEFAULT_SPACE}"}
+  rnd=$(head -n 50 /dev/urandom | tr -dc $space | fold -w $len)
+  if [ "$3" ]; then
+    rnd=$(echo "${rnd}" | grep -v "${3}")
+  fi
+  echo $(echo "${rnd}" | head -n1)
+}
+
+# Pad a string with random characters
+# Arguments:
+#  - String to pad
+#  - Desired length
+#  - Pattern to pad with
+function pad_string {
+  str=$1
+  len=$2
+  pattern=$3
+
+  remain=$(( $len - ${#str} ))
+  if [ "$remain" -ge 1 ]; then
+    rnstr=$(random_string $remain $pattern)
+    str="${str}${rnstr}"
+  fi
+  echo $str
+}
+
 function generate_password {
-    head -n 50 /dev/urandom|tr -dc "a-np-zA-NP-Z1-9-_"|fold -w 12 | grep -v '^-' | head -n1
+  random_string 12 "a-np-zA-NP-Z1-9-_" '^-'
 }
 
 function generate_username {
-    if [ "$1" ]
-    then
-        username="$1"
-    else
-        username="admin"
-    fi
-
-    remain=$(( 12 - ${#username} ))
-    if [ "$remain" -ge 1 ]
-    then
-        rnstr=$(head -n 50 /dev/urandom|tr -dc "a-np-zA-NP-Z1-9"|fold -w $remain | head -n1)
-        username="${username}${rnstr}"
-    fi
-    echo $username
+  username=${1-'admin'}
+  echo $(pad_string $username 12 "a-np-zA-NP-Z1-9")
 }
 
 function log_message() {
