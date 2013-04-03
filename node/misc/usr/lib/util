@@ -84,6 +84,9 @@ function cart_props {
     echo "CART_PROPERTIES: $@"
 }
 
+function set_env_var {
+    echo "ENV_VAR_ADD: $@"
+}
 function generate_password {
     head -n 50 /dev/urandom|tr -dc "a-np-zA-NP-Z1-9-_"|fold -w 12 | grep -v '^-' | head -n1
 }
