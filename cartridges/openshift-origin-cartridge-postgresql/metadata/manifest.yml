@@ -9,9 +9,8 @@ Display-Name: PostgreSQL Database 8.4
 Description: "PostgreSQL is an advanced Object-Relational database management system"
 Version:   '8.4'
 Versions:  [8.4]
-License:     The PostgreSQL Licence
-Licence-Url: http://www.postgresql.org/about/licence/
-Vendor: postgres
+License:   ASL 2.0
+Vendor:    Red Hat
 Website: http://www.postgresql.org
 Categories:
   - service
