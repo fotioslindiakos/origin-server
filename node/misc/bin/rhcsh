@@ -124,16 +124,11 @@ function mysql() {
 
 }  #  End of  mysql  function.
 
-
+# TODO: This should be able to be handled in PGOPTIONS
 function psql() {
-    PGDATABASE="$OPENSHIFT_APP_NAME" \
-        PGHOST="$OPENSHIFT_POSTGRESQL_DB_HOST" \
-        PGPORT="${OPENSHIFT_POSTGRESQL_DB_PORT:-5432}" \
-        PGUSER="${OPENSHIFT_POSTGRESQL_DB_USERNAME:-'admin'}" \
-        PGPASSWORD="${OPENSHIFT_POSTGRESQL_DB_PASSWORD}" \
-        /usr/bin/psql --set HISTFILE="~/app-root/data/.psql_history" "$@"
-}  #  End of psql function.
-
+  histfile=${OPENSHIFT_POSTGRESQL_DB_HISTFILE:-$OPENSHIFT_DATA_DIR/.psql_history}
+  /usr/bin/psql --set HISTFILE="${histfile}" "$@"
+} # End of psql function
 
 function mongo() {
    if test $# -gt 0; then

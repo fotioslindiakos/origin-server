@@ -255,6 +255,18 @@ jenkins_build = #{@jenkins_build}
 
       output.strip
     end
+
+    def scp_file(src, dest='/tmp')
+      dest = File.join(dest,File.basename(src))
+      cmd = "scp 2>/dev/null -o StrictHostKeyChecking=no #{src} #{uid}@#{name}-#{namespace}.#{$domain}:#{dest}"
+
+      $logger.debug "Running #{cmd}"
+
+      output = `#{cmd}`
+      $logger.debug "Output: #{output}"
+
+      dest
+    end
   end
 end
 World(AppHelper)

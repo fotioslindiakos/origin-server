@@ -10,13 +10,13 @@ echo "Installing postgres"
 mkdir $OPENSHIFT_POSTGRESQL_DIR/{log,pid,socket,data,run}
 
 # Set a marker so we can run the postgres initialization on first run
-touch $TMP/.postgresql_setup_invocation_marker
+touch $OPENSHIFT_DATA_DIR/.postgresql_setup_invocation_marker
 
 # Create postgresql database
 # The contained tar file is the results of "initdb -D data", but much, much faster.
 tar -zxf $OPENSHIFT_POSTGRESQL_DIR/conf/pgdata-template.tar.gz -C "${OPENSHIFT_POSTGRESQL_DIR}/data/"
 chmod 0700 $OPENSHIFT_POSTGRESQL_DIR/data
-chmod 0700 $OPENSHIFT_POSTGRESQL_DB_SOCKET_DIR
+chmod 0700 $OPENSHIFT_POSTGRESQL_DB_SOCKET
 
 echo 'Generating username and password'
 
@@ -25,6 +25,7 @@ username=$(generate_username admin 12 'a-np-z1-9')
 password=$(generate_password)
 
 set_env_var 'OPENSHIFT_POSTGRESQL_DB_USERNAME' $username $env_dir
+set_env_var 'PGUSER' $username $env_dir
 set_env_var 'OPENSHIFT_POSTGRESQL_DB_PASSWORD' $password $env_dir
 
 # TODO: This should be able to be in an erb file, but they're not sourced in the correct order
