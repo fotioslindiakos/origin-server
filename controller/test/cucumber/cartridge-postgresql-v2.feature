@@ -5,22 +5,6 @@ Feature: Postgres Application Sub-Cartridge
   Background:
     Given a v2 default node
 
-  Scenario: Create/Delete one application with a Postgres database
-    Given a new mock-0.1 type application
-
-    When I embed a postgresql-8.4 cartridge into the application
-    Then a postgres process will be running
-    And the postgresql-8.4 cartridge instance directory will exist
-
-    When I stop the postgresql-8.4 cartridge
-    Then a postgres process will not be running
-
-    When I start the postgresql-8.4 cartridge
-    Then a postgres process will be running
-
-    When I destroy the application
-    Then a postgres process will not be running
-
   Scenario: Database connections
     Given a new client created mock-0.1 application
     Given the embedded postgresql-8.4 cartridge is added

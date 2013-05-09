@@ -21,15 +21,28 @@ Then /^I can select from mysql$/ do
   app_helper_mysql('select 1').should be == '1'
 end
 
+When /^I create a test table in mysql( without dropping)?$/ do |drop|
+  sql = <<-sql
+    create table cuke_test(
+      id int not null primary key auto_increment,
+      msg char(32)
+    );
+  sql
+
+  without = !!!drop
+  if without
+    drop_sql = <<-sql
+      drop table if exists cuke_test;
+    sql
+
+    sql = "#{drop_sql} #{sql}"
+  end
+
+  app_helper_mysql(sql)
+end
+
 When /^I insert (additional )?test data into mysql$/ do |additional|
   run_sql = %Q{
-drop table if exists cuke_test;
-
-create table cuke_test(
-  id int not null primary key auto_increment,
-  msg char(32)
-);
-
 insert into cuke_test(id, msg) values(null, \\"initial data\\");
   }
 
