@@ -43,7 +43,8 @@ module AppHelper
     end
 
     def self.create_unique(type, name=nil, scalable=false)
-      chars = ("1".."9").to_a
+      # TODO: These need to be restricted because some apps like Rails can't start with a number
+      chars = ("a".."z").to_a
       loop do
         # Generate a random username
         name ||= random_string(8, chars)
@@ -180,7 +181,7 @@ jenkins_build    = #{@jenkins_build}
     def curl_head(url, host=nil)
       auth = "--user #{@jenkins_user}:#{@jenkins_password}" if @jenkins_user
       host = "-H 'Host: #{host}'" if host
-      `curl -w %{http_code} --output /dev/null --insecure -s --head --max-time 30 #{auth} #{host} #{url}`
+      `curl -w %{http_code} --output /dev/null -L --insecure -s --head --max-time 30 #{auth} #{host} #{url}`
     end
 
     def is_inaccessible?(max_retries=60, port=nil)
@@ -199,6 +200,7 @@ jenkins_build    = #{@jenkins_build}
       return false
     end
 
+    # TODO: These should be merged with rhc's httpify code
     # Host is for the host header
     def is_accessible?(use_https=false, max_retries=120, host=nil, port=nil)
       prefix = use_https ? "https://" : "http://"

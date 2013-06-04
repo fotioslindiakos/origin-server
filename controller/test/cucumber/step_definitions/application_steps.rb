@@ -4,6 +4,16 @@ require 'fileutils'
 
 include AppHelper
 
+def quickstart_url(quickstart)
+  unless quickstart.include?("/")
+    quickstart = "openshift/#{quickstart}"
+  end
+  unless quickstart =~ %r{^(http(s)?|git)://}
+    quickstart = "git://github.com/#{quickstart}"
+  end
+  quickstart
+end
+
 Given /^an existing (.+) application with an embedded (.*) cartridge$/ do |type, embed|
   TestApp.find_on_fs.each do |app|
     if app.type == type and app.embed.include?(embed)
@@ -27,16 +37,20 @@ Given /^an existing (.+) application( without an embedded cartridge)?$/ do |type
   @app.should_not be_nil
 end
 
-Given /^a new client created( scalable)? (.+) application$/ do |scalable, type|
+Given /^a new client created( scalable)? (.+) application(?: with quickstart (.*))?/ do |scalable,type,quickstart|
   @app = TestApp.create_unique(type, nil, scalable)
   @apps ||= []
   @apps << @app.name
+  misc_opts = [].tap do |opts|
+    opts << "-s" if scalable
+    # If we do not specify a full URL, use the OpenShift quickstart
+    opts << "--from-code #{quickstart_url(quickstart)}" if quickstart
+  end.join(' ')
+
   register_user(@app.login, @app.password) if $registration_required
   if rhc_create_domain(@app)
-    if scalable
-      rhc_create_app(@app, true, '-s')
-    else
-      rhc_create_app(@app)
+    @cart_create_time = Benchmark.realtime do
+      rhc_create_app(@app, true, misc_opts)
     end
   end
   raise "Could not create domain: #{@app.create_domain_code}" unless @app.create_domain_code == 0
@@ -66,6 +80,33 @@ When /^the submodule is added$/ do
     run("REPLACE=`cat submodule_test_repo/index`; sed -i \"s/OpenShift/${REPLACE}/\" #{@app.get_index_file}")
     run("git commit -a -m 'Test submodule change'")
     run("git push >> " + @app.get_log("git_push") + " 2>&1")
+  end
+end
+
+When /^the (.*) quickstart is added$/ do |qs|
+  Dir.chdir(@app.repo) do
+    quickstart = quickstart_url(qs)
+    run("git remote add upstream -m master #{quickstart}")
+    @pull_time = Benchmark.realtime do
+      run("git pull -s recursive --no-commit -X theirs upstream master")
+    end
+    run("git commit -m 'merged upstream'")
+    @quickstart_time = Benchmark.realtime do
+      retval = run("git push >> " + @app.get_log("git_push") + " 2>&1")
+      retval.should == 0
+    end
+  end
+end
+
+When "I push a change to the application" do
+  Dir.chdir(@app.repo) do
+    run("echo 'random data' > .openshift/new_file")
+    run("git add .openshift/new_file")
+    run("git commit -m 'pushed file'")
+    @push_time = Benchmark.realtime do
+      retval = run("git push >> " + @app.get_log("git_push_2") + " 2>&1")
+      retval.should == 0
+    end
   end
 end
 
@@ -257,4 +298,26 @@ end
 
 Then /^the application should not be accessible via node\-web\-proxy$/ do
   @app.is_inaccessible?(60, 8000).should be_true
+end
+
+After('@timed') do |scenario|
+  # Figure out initial push time
+  times = [@cart_create_time, @pull_time, @quickstart_time]
+  times.unshift times.compact.inject(:+)
+
+  # Add second push time
+  times << @push_time
+
+  strs = times.compact.map{|x| "%.2f" % x }
+
+  unless scenario.failed?
+    rhc_ctl_destroy(@app)
+    rhc_delete_domain(@app)
+  else
+    strs << @app.hostname
+  end
+
+  strs << nil
+
+  puts strs.join(' | ')
 end
