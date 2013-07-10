@@ -1,6 +1,9 @@
 require 'openshift-origin-node/utils/shell_exec'
 require 'fileutils'
 require 'etc'
+require 'yaml'
+
+require 'time'
 
 module OpenShift
   module Runtime
@@ -113,6 +116,8 @@ module OpenShift
           @@RET_NO_VARIABLE = 96
           @@RET_NO_CONTROLLER = 255
 
+          attr_reader :uuid
+
           def initialize(uuid)
             @uuid = uuid
 
@@ -123,6 +128,9 @@ module OpenShift
             if rc != 0
               raise ArgumentError, "User does not exist in cgroups: #{@uuid}"
             end
+
+            # Not currently needed
+            #@uid = @uuid.empty? ? nil : Etc.getpwnam(uuid).uid
           end
 
           # Get the current values for any keys specified in the default template
@@ -201,6 +209,38 @@ module OpenShift
           def boosted?
             profile == :boosted
           end
+
+=begin
+          #
+          # This is probably unneeded throttling stuff that was previously used
+          #
+
+          attr_accessor :pids
+          def pids
+            @pids ||= get_pids
+          end
+
+          def running_time
+            return -1 if pids.empty?
+            oldest = pids.map{|pid| pid_etime(pid) }.min
+            Time.now - Time.at(oldest)
+          end
+
+          def process_utilization
+            a = fetch('cpuacct.usage').to_i
+            sleep 1
+            b = fetch('cpuacct.usage').to_i
+            b - a
+          end
+
+          def get_pids
+            Utils::oo_spawn("egrep '#{@cgpath}$' /proc/*/cgroup 2> /dev/null | awk -F/ '{print $3}'")[0].lines.to_a.map(&:to_i)
+          end
+
+          def pid_etime(pid)
+            Utils.oo_spawn("stat -t /proc/#{pid}")[0].split(' ')[13].to_i
+          end
+=end
         end
 
         def self.with_no_cpu_limits(uuid)
