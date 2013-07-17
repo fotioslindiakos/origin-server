@@ -220,11 +220,11 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         end
 
         def enable_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.enable(@container.uuid)
+          ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).create
         end
 
         def stop_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.disable(@container.uuid)
+          ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).delete
         end
 
         def enable_traffic_control
@@ -325,12 +325,30 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         end
 
         def freeze_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.freezer_burn(@container.uuid)
+          begin
+            cg = ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid)
+            cg.freeze
+            20.times do
+              pids = cg.processes
+              if pids.empty?
+                return
+              else
+                Process::Kill("KILL",*pids)
+                cg.thaw
+                sleep(0.1)
+                cg.freeze
+              end
+            end
+          rescue
+          end
         end
 
         # release resources (cgroups thaw), this causes Zombies to get killed
         def unfreeze_cgroups
-          ::OpenShift::Runtime::Utils::Cgroups.thaw(@container.uuid)
+          begin
+            ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).thaw
+          rescue
+          end
         end
 
         # Private: list directories (cartridges) in home directory

@@ -79,9 +79,11 @@ end
 
 begin
   if all_containers
-    OpenShift::Runtime::Utils::Cgroups::enable_all
+    OpenShift::Runtime::ApplicationContainer.each do |c|
+      OpenShift::Runtime::Utils::Cgroups.new(c.uuid).create
+    end
   else
-    OpenShift::Runtime::Utils::Cgroups::enable(container_uuid.to_s)
+    OpenShift::Runtime::Utils::Cgroups.new(container_uuid.to_s).create
   end
 rescue Exception => e
   $stderr.puts(e.message)

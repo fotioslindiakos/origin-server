@@ -336,7 +336,7 @@ module OpenShift
       #
       def unidle_gear(options={})
         output = ""
-        OpenShift::Runtime::Utils::Cgroups::with_no_cpu_limits(@uuid) do
+        OpenShift::Runtime::Utils::Cgroups.new(@uuid).boost do
           if stop_lock? and (state.value == State::IDLE)
             state.value = State::STARTED
             output      = start_gear
