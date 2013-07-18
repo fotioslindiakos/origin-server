@@ -2,6 +2,7 @@
 
 require 'active_support/core_ext/numeric/time'
 require 'openshift-origin-node/utils/cgroups'
+require 'openshift-origin-node/utils/cgroups/benchmarked'
 
 # Provide some helpers for array math
 # These will only work on arrays of number values
@@ -37,6 +38,7 @@ module OpenShift
     module Utils
       class Cgroups
         class MonitoredGear < Attrs
+          include Benchmarked
           @@delay = 5.seconds
 
           @@intervals = [10.seconds, 30.seconds]
@@ -53,11 +55,15 @@ module OpenShift
           # Get the current values and remove any expired values
           # Then make sure our intervals are updated
           def update(vals)
-            time = Time.now
-            @times[time] = vals
-            oldest = time - @@max
-            @times.delete_if{|k,v| k < oldest }
-            @utilization = update_utilization
+            bm(:update) do
+              time = Time.now
+              @times[time] = vals
+              oldest = time - @@max
+              @times.delete_if{|k,v| k < oldest }
+            end
+            bm(:utilization) do
+              @utilization = update_utilization
+            end
           end
 
           def oldest

@@ -3,6 +3,7 @@
 require 'active_support/core_ext/numeric/time'
 require 'openshift-origin-node/utils/cgroups'
 require 'openshift-origin-node/utils/cgroups/monitored_gear'
+require 'openshift-origin-node/utils/cgroups/benchmarked'
 require 'yaml'
 
 module OpenShift
@@ -10,6 +11,7 @@ module OpenShift
     module Utils
       class Cgroups
         class Throttler
+          include Benchmarked
           ROOT_UUID = ""
 
           def initialize(*args)
@@ -75,7 +77,9 @@ module OpenShift
                 vals = get_usage
                 vals = Hash[vals.map{|uuid,hash| [uuid,hash.select{|k,v| @wanted_keys.include?k}]}]
 
-                update(vals)
+                bm(:update) do
+                  update(vals)
+                end
 
                 sleep MonitoredGear::delay
               end
@@ -115,13 +119,15 @@ module OpenShift
           # Update the list of uuids
           # Synchronize this in case we remove applications in the middle of an update
           def uuids=(new_uuids)
-            @mutex.synchronize do
-              # Set the uuids of running gears
-              @uuids = new_uuids
-              # Make sure to use the helper here so we include the wanted_uuids
-              missing_apps = @running_apps.keys - uuids
-              # Delete any missing gears to free up memory
-              @running_apps.delete_if{|k,v| missing_apps.include?(k) }
+            bm(:uuids) do
+              @mutex.synchronize do
+                # Set the uuids of running gears
+                @uuids = new_uuids
+                # Make sure to use the helper here so we include the wanted_uuids
+                missing_apps = @running_apps.keys - uuids
+                # Delete any missing gears to free up memory
+                @running_apps.delete_if{|k,v| missing_apps.include?(k) }
+              end
             end
           end
 
@@ -129,10 +135,12 @@ module OpenShift
             x = @running_apps.inject({}) do |h,(k,v)|
               h[k] = {
                 age:         v.age,
-                utilization: v.utilization
+                utilization: v.utilization,
+                benchmarks:  v.benchmarks
               }
               h
             end
+            x[:benchmarks] = benchmarks
             x.to_yaml
           end
         end
