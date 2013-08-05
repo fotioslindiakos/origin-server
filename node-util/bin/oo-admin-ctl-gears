@@ -56,7 +56,7 @@ module OpenShift
         p_runner do |gear|
           syslog_pass_fail("Started", "Failed to start", gear) do
             output_pass_fail("Starting", gear) do
-              gear.start_gear
+              gear.start
             end
           end
         end
@@ -66,7 +66,7 @@ module OpenShift
         p_runner do |gear|
           syslog_pass_fail("Stopped", "Failed to stop", gear) do
             output_pass_fail("Stopping", gear) do
-              gear.stop_gear(user_initiated: false)
+              gear.stop(user_initiated: false)
             end
           end
         end
@@ -77,8 +77,8 @@ module OpenShift
           syslog_pass_fail("Restarted", "Failed to restart", gear) do
             output_pass_fail("Restarting", gear) do
               out = ""
-              out << gear.stop_gear
-              out << gear.start_gear
+              out << gear.stop
+              out << gear.start
               out
             end
           end

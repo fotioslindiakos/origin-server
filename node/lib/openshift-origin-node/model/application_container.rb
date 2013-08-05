@@ -63,7 +63,7 @@ module OpenShift
 
       attr_reader :uuid, :application_uuid, :state, :container_name, :application_name, :namespace, :container_dir,
                   :quota_blocks, :quota_files, :base_dir, :gecos, :skel_dir, :supplementary_groups,
-                  :cartridge_model, :container_plugin, :hourglass
+                  :cartridge_model, :container_plugin, :hourglass, :container_plugin
       attr_accessor :uid, :gid
 
       containerization_plugin_gem = ::OpenShift::Config.new.get('CONTAINERIZATION_PLUGIN') 
@@ -324,7 +324,7 @@ module OpenShift
           frontend = FrontendHttpServer.new(self)
           frontend.idle
           begin
-            output = stop_gear
+            output = stop
           ensure
             state.value = State::IDLE
           end
@@ -337,16 +337,16 @@ module OpenShift
       #
       def unidle_gear(options={})
         output = ""
-        OpenShift::Runtime::Utils::Cgroups.new(@uuid).boost do
-        if stop_lock? and (state.value == State::IDLE)
-          state.value = State::STARTED
-          output      = start_gear
-        end
+        @container.boost do
+          if stop_lock? and (state.value == State::IDLE)
+            state.value = State::STARTED
+            output      = start
+          end
 
-        frontend = FrontendHttpServer.new(self)
-        if frontend.idle?
-          frontend.unidle
-        end
+          frontend = FrontendHttpServer.new(self)
+          if frontend.idle?
+            frontend.unidle
+          end
         end
         output
       end
@@ -356,6 +356,20 @@ module OpenShift
       # is model specific, but +options+ is provided to the implementation.
       def start_gear(options={})
         @cartridge_model.start_gear(options)
+      end
+
+      def start(options={})
+        @container_plugin.pre_start(option) if @container_plugin.respond_to?(:pre_start)
+        @container_plugin.start(option)
+        start_gear(option)
+        @container_plugin.post_start(option) if @container_plugin.respond_to?(:post_start)
+      end
+
+      def stop(options={})
+        @container_plugin.pre_stop(option) if @container_plugin.respond_to?(:pre_stop)
+        stop_gear(options)
+        @container_plugin.stop(options)
+        @container_plugin.post_stop(option) if @container_plugin.respond_to?(:post_stop)
       end
 
       ##
@@ -618,6 +632,14 @@ module OpenShift
 
       def set_rw_permission(paths)
         @container_plugin.set_rw_permission(paths)
+      end
+
+      def boost(&block)
+        @container_plugin.boost(&block)
+      end
+
+      def map_cartridge_endpoint_ip_port(cartridge, endpoint)
+        @container_plugin.map_cartridge_endpoint_ip_port(cartridge, endpoint)
       end
     end
   end

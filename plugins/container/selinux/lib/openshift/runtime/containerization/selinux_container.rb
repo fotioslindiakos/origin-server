@@ -177,6 +177,10 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
           restore_cgroups
         end
 
+        def boost(&block)
+          ::OpenShift::Runtime::Utils::Cgroups.new(@container.uuid).boost(&block)
+        end
+
         # Deterministically constructs an IP address for the given UID based on the given
         # host identifier (LSB of the IP). The host identifier must be a value between 1-127
         # inclusive.
@@ -329,6 +333,15 @@ Dir(after)    #{@container.uuid}/#{@container.uid} => #{list_home_dir(@container
         def set_rw_permission(paths)
           PathUtils.oo_chown(@container.uid, @container.gid, paths)
           ::OpenShift::Runtime::Utils::SELinux.set_mcs_label(@mcs_label, paths)
+        end
+
+        def map_cartridge_endpoint_ip_port(cartridge, endpoint)
+          @container.list_proxy_mappings.each do |mapping|
+            if endpoint.private_ip_name == mapping[:private_ip_name]
+              return "#{mapping[:private_ip]}:#{mapping[:private_port]}"
+            end
+          end
+          raise "Cartridge enpoint mapping not found"
         end
 
         private

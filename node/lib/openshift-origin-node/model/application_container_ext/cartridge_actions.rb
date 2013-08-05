@@ -100,7 +100,7 @@ module OpenShift
 
             if private_ip == nil
               raise "Missing private IP #{endpoint.private_ip_name} for cart #{cart.name} in gear #{@uuid}, "\
-            "required to create public endpoint #{endpoint.public_port_name}"
+                "required to create public endpoint #{endpoint.public_port_name}"
             end
 
             public_port = create_public_endpoint(private_ip, endpoint.private_port)
@@ -110,7 +110,7 @@ module OpenShift
             output << "NOTIFY_ENDPOINT_CREATE: #{endpoint.public_port_name} #{config.get('PUBLIC_IP')} #{public_port}\n" 
 
             logger.info("Created public endpoint for cart #{cart.name} in gear #{@uuid}: "\
-          "[#{endpoint.public_port_name}=#{public_port}]")
+              "[#{endpoint.public_port_name}=#{public_port}]")
           end
 
           output

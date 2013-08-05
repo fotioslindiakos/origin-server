@@ -4,6 +4,7 @@ $:.push File.expand_path("../lib", __FILE__)
 lib_dir  = File.join(File.join("lib", "**"), "*")
 test_dir  = File.join(File.join("test", "**"), "*")
 conf_dir  = File.join(File.join("conf", "**"), "*")
+misc_dir  = File.join(File.join("misc", "**"), "*")
 spec_file = "rubygem-openshift-origin-container-libvirt.spec"
 
 Gem::Specification.new do |s|
@@ -18,7 +19,7 @@ Gem::Specification.new do |s|
 
   s.rubyforge_project = "openshift-origin-container-libvirt"
 
-  s.files       = Dir[lib_dir] + Dir[conf_dir] + Dir[config_dir]
+  s.files       = Dir[lib_dir] + Dir[conf_dir] + Dir[config_dir] + Dir[misc_dir]
   s.test_files  = Dir[test_dir]
   s.executables = []
   s.files       += %w(README.md Rakefile Gemfile rubygem-openshift-origin-container-libvirt.spec openshift-origin-container-libvirt.gemspec LICENSE COPYRIGHT)
