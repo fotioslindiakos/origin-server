@@ -43,6 +43,9 @@ RewriteRule ^.*$ - [E=V_MATCH_HOST:%1,NS]
 RewriteCond %{HTTP:X-OpenShift-Host} ^(.+)$
 RewriteRule ^.*$ - [E=V_MATCH_HOST:%1,NS]
 
+RewriteRule /stats$ http://127.0.0.1:1081/ [E=V_ROUTE:127.0.0.1/,E=V_MATCH_PATH:/stats,P,L]
+RewriteRule /stats/(.*) http://127.0.0.1:1081/$1 [E=V_ROUTE:127.0.0.1/$1,E=V_MATCH_PATH:/stats/$1,P,L]
+
 # Call the unidler and redirect back to the original request.
 # www.example.com => uuid
 RewriteCond ${openshift-idler:%{ENV:V_MATCH_HOST}} ^(.+)$
