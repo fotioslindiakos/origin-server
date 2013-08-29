@@ -1,3 +1,6 @@
+= javascript_include_tag '//cdnjs.cloudflare.com/ajax/libs/d3/3.2.2/d3.v3.min.js'
+= javascript_include_tag '//cdnjs.cloudflare.com/ajax/libs/cubism/1.2.2/cubism.v1.min.js'
+
 .row
   .span7
     %h1.header{:title => "Gear #{@gear.uuid}"}
@@ -10,24 +13,85 @@
     %h1.user.right{:title => "Owner #{owner_login}"}
       = image_tag "admin_console/user.svg", :class => "icon"
       = link_to owner_login, user_path(:id => owner_login)
-%table.table-horizontal
-  %tbody
-    %tr
-      %th
-        Node
-      %td
-        = link_to @gear.server_identity, node_path(:id => @gear.server_identity)
-    %tr
-      %th
-        Application
-      %td
-        = link_to @app.fqdn, application_path(:id => @app.uuid)
-    %tr
-      %th
-        Cartridges
-      %td
-        %ul.unstyled
-          - cartridges = gear_group_cartridges(@app, @gear.group_instance)
-          - cartridges.each do |cartridge|
-            %li
-              = cartridge[:display_name]
+%section
+  %table.table-horizontal
+    %tbody
+      %tr
+        %th
+          Node
+        %td
+          = link_to @gear.server_identity, node_path(:id => @gear.server_identity)
+      %tr
+        %th
+          Application
+        %td
+          = link_to @app.fqdn, application_path(:id => @app.uuid)
+      %tr
+        %th
+          Cartridges
+        %td
+          %ul.unstyled
+            - cartridges = gear_group_cartridges(@app, @gear.group_instance)
+            - cartridges.each do |cartridge|
+              %li
+                = cartridge[:display_name]
+#statistics
+  %h4
+    Usage Statistics
+  .graph
+
+- content_for :javascripts do
+  :javascript
+    var step = +cubism.option("step", 1e4),
+        offset = +cubism.option("offset", 0);
+
+    var context = cubism.context()
+        .step(step)
+        .size(800)
+        .serverDelay(offset);
+
+    var cube = context.cube("https://ec2-54-242-169-174.compute-1.amazonaws.com/stats");
+
+    var graph_div = d3.select("#statistics .graph");
+    var gear_uuid = '#{@gear.uuid}';
+
+    graph_div.selectAll(".axis")
+        .data(["top", "bottom"])
+      .enter().append("div")
+        .attr("class", function(d) { return d + " axis"; })
+        .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+
+    graph_div.append("div")
+      .attr("class", "rule")
+      .call(context.rule());
+
+    graph_div.insert("div", ".bottom")
+        .attr("class", "group")
+        //.call(function() { this.append("header").text("openshift gear usage sample"); })
+      .selectAll(".horizon")
+        .data([
+          {title: "%cpu", metric: cube.metric("max(gear_usage(UUID_" + gear_uuid + ".PCT_CPU))")},
+          {title: "%mem", metric: cube.metric("max(gear_usage(UUID_" + gear_uuid + ".PCT_MEM))")}
+        ])
+      .enter().append("div")
+        .attr("class", "horizon")
+      .call(context.horizon()
+        .extent([0, 100])
+        .title(function(d) { return d.title; })
+        .metric(function(d) { return d.metric; }));
+
+
+    // On mousemove, reposition the chart values to match the rule.
+    context.on("focus", function(i) {
+      d3.selectAll(".value").style("right", i == null ? null : context.size() - i + "px");
+    });
+
+    // Initialize the step menu's selection.
+    d3.selectAll("#step option").property("selected", function() {
+      return this.value == step;
+    });
+
+    // Update the location on step change.
+    d3.select("#step").on("change", function() {
+      window.location = "?step=" + this.value + "&" + location.search.replace(/[?&]step=[^&]*(&|$)/g, "$1").substring(1);
+    });

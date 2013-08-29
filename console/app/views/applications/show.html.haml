@@ -1,3 +1,6 @@
+= javascript_include_tag '//cdnjs.cloudflare.com/ajax/libs/d3/3.2.2/d3.v3.min.js'
+= javascript_include_tag '//cdnjs.cloudflare.com/ajax/libs/cubism/1.2.2/cubism.v1.min.js'
+
 - content_for :full_layout, true
 - content_for :dark_layout, true
 
@@ -64,12 +67,16 @@
 
                 %h2{:title => cartridge.name}= cartridge.display_name
 
+              #statistics{"data-uuid" => "521e501b6de29db5fd000007"}
+                %h3 Statistics
+                .graph
+
               - if cartridge.custom?
                 %p Created from #{link_to cartridge.url, cartridge.url}
 
               - if cartridge.git_url
                 - if @has_keys
-                  %h6 
+                  %h6
                     Git Repository
                   %p
                     %input#application_git_url.git-url{:readonly => 'readonly', :value => cartridge.git_url, :title => 'The code for your application will be available through this Git repository.'}
@@ -79,9 +86,9 @@
 
                   %h6= link_to 'Want to log in to your application?', '#', :'data-unhide' => '.ssh.hidden'
                   .ssh.hidden
-                    %p 
-                      The command below will open a Secure Shell (SSH) session to your application on most 
-                      operating systems.  See our #{link_to 'SSH help page', ssh_help_url} for information 
+                    %p
+                      The command below will open a Secure Shell (SSH) session to your application on most
+                      operating systems. See our #{link_to 'SSH help page', ssh_help_url} for information
                       about connecting with Windows, Mac, and Linux computers.
                     %p
                       %input#application_ssh_url.git-url{:readonly => 'readonly', :value => "ssh #{cartridge.ssh_string}", :title => 'Cut and paste this command into a command shell to access your OpenShift application.'}
@@ -101,11 +108,11 @@
                       - if cartridge.current_scale == 1
                         = link_to "Scaling with HAProxy x1", application_scaling_path(@application), :title => 'Your web cartridge will automatically scale up when we detect you are receiving more web traffic'
                       - else
-                        = link_to "Scaled up with HAProxy x#{cartridge.current_scale}", 
-                                  application_scaling_path(@application), 
+                        = link_to "Scaled up with HAProxy x#{cartridge.current_scale}",
+                                  application_scaling_path(@application),
                                   :title => web_cartridge_scale_title(cartridge)
                   - if cartridge.builds?
-                    .embedded-cart 
+                    .embedded-cart
                       =link_to 'See Jenkins Build jobs', @application.build_job_url, :title=> 'Jenkins is currently running builds for your application'
                       =link_to '(configure)', application_building_path(@application), :title => 'Remove or change your Jenkins configuration'
                   - elsif cartridge.buildable?
@@ -130,7 +137,7 @@
           
     %ul.unstyled
       - if @application.aliases.empty?
-        %li 
+        %li
           %span No aliases set.
           = link_to('Set one now', new_application_alias_path(@application))
       - else
@@ -158,7 +165,7 @@
     %h5 Need Help?
     %ul.unstyled
       %li= link_to 'OpenShift User Guide', user_guide_url
-      %li= link_to 'Sync your OpenShift repo with an existing Git repo', sync_git_with_remote_repo_knowledge_base_url 
+      %li= link_to 'Sync your OpenShift repo with an existing Git repo', sync_git_with_remote_repo_knowledge_base_url
 
   -# %h5 Need Help? #restore later
     %ul.unstyled
@@ -187,4 +194,60 @@
       return false;
     }).on('submit', 'form', function() {
       $('#restart-container .btn').hide();
+    });
+
+  :javascript
+    var step = +cubism.option("step", 1e4),
+        offset = +cubism.option("offset", 0);
+
+    var context = cubism.context()
+        .step(step)
+        .size(800)
+        .serverDelay(offset);
+
+    var cube = context.cube("https://ec2-54-242-169-174.compute-1.amazonaws.com/stats");
+
+    var graph_div = d3.select("#statistics .graph");
+    var stats_wrapper = $(graph_div[0]).parent();
+    var gear_uuid = stats_wrapper.data('uuid');
+
+    graph_div.selectAll(".axis")
+        .data(["top", "bottom"])
+      .enter().append("div")
+        .attr("class", function(d) { return d + " axis"; })
+        .each(function(d) { d3.select(this).call(context.axis().ticks(12).orient(d)); });
+
+    graph_div.append("div")
+      .attr("class", "rule")
+      .call(context.rule());
+
+    graph_div.insert("div", ".bottom")
+        .attr("class", "group")
+        //.call(function() { this.append("header").text("openshift gear usage sample"); })
+      .selectAll(".horizon")
+        .data([
+          {title: "%cpu", metric: cube.metric("max(gear_usage(UUID_" + gear_uuid + ".PCT_CPU))")},
+          {title: "%mem", metric: cube.metric("max(gear_usage(UUID_" + gear_uuid + ".PCT_MEM))")}
+        ])
+      .enter().append("div")
+        .attr("class", "horizon")
+      .call(context.horizon()
+        .extent([0, 100])
+        .title(function(d) { return d.title; })
+        .metric(function(d) { return d.metric; }));
+
+
+    // On mousemove, reposition the chart values to match the rule.
+    context.on("focus", function(i) {
+      d3.selectAll(".value").style("right", i == null ? null : context.size() - i + "px");
+    });
+
+    // Initialize the step menu's selection.
+    d3.selectAll("#step option").property("selected", function() {
+      return this.value == step;
+    });
+
+    // Update the location on step change.
+    d3.select("#step").on("change", function() {
+      window.location = "?step=" + this.value + "&" + location.search.replace(/[?&]step=[^&]*(&|$)/g, "$1").substring(1);
     });
