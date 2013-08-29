@@ -50,7 +50,7 @@
         .size(800)
         .serverDelay(offset);
 
-    var cube = context.cube("https://ec2-54-242-169-174.compute-1.amazonaws.com/stats");
+    var cube = context.cube("//" + location.hostname + "/stats");
 
     var graph_div = d3.select("#statistics .graph");
     var gear_uuid = '#{@gear.uuid}';
