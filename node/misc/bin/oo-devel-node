@@ -679,7 +679,7 @@ command :'frontend-restore' do |c|
            end
 
     frontend = new_frontend(options.with_container_uuid, c)
-    execute { frontend.json_create({'data' => JSON.parse(blob)}) }
+    execute { frontend.class.json_create({'data' => JSON.parse(blob)}) }
   end
 end
 
